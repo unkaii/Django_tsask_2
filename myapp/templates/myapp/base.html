@@ -4,58 +4,125 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Успеваемость{% endblock %}</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <style>
-  body { background:#f8f9fa; }
-  .grade-5 { color:#fff; background:#198754; }
-  .grade-4 { color:#fff; background:#0d6efd; }
-  .grade-3 { color:#fff; background:#fd7e14; }
-  .grade-2 { color:#fff; background:#dc3545; }
-  .grade-badge { display:inline-block; width:32px; height:32px;
-                 line-height:32px; text-align:center;
-                 border-radius:50%; font-weight:700; }
-  .card { box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+  :root{
+    --p:#6366f1;--pd:#4f46e5;--pl:#e0e7ff;
+    --ok:#10b981;--ok-bg:#d1fae5;
+    --err:#ef4444;--err-bg:#fee2e2;
+    --bg:#f8fafc;--sf:#fff;--bd:#e2e8f0;
+    --tx:#1e293b;--mu:#64748b;
+    --sh:0 4px 6px -1px rgba(0,0,0,.08);
+    --shl:0 10px 25px -3px rgba(0,0,0,.1);
+    --r:12px;--rs:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#f8fafc,#eef2ff) fixed;min-height:100vh;color:var(--tx);line-height:1.6}
+  .container{max-width:1100px;margin:0 auto;padding:0 24px 60px}
+
+  nav{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--bd);padding:16px 0;margin-bottom:40px;position:sticky;top:0;z-index:100}
+  .nav-inner{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:8px}
+  .logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,var(--p),#8b5cf6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-right:auto}
+  .nav-link{color:var(--mu);text-decoration:none;padding:8px 16px;border-radius:var(--rs);font-weight:500;font-size:.95rem;transition:.2s}
+  .nav-link:hover{background:var(--pl);color:var(--pd)}
+
+  h1{font-size:2rem;font-weight:700;margin-bottom:8px;letter-spacing:-.02em}
+  h2{font-size:1.35rem;font-weight:600;margin:40px 0 16px;display:flex;align-items:center;gap:10px}
+  h2::before{content:'';width:4px;height:22px;background:linear-gradient(135deg,var(--p),#8b5cf6);border-radius:2px}
+  .subtitle{color:var(--mu);margin-bottom:32px}
+  small{color:var(--mu);font-weight:400}
+
+  .card{background:var(--sf);border-radius:var(--r);box-shadow:var(--sh);padding:32px;margin-bottom:24px;border:1px solid var(--bd);transition:.3s}
+  .card:hover{box-shadow:var(--shl)}
+
+  form p{margin-bottom:20px;display:flex;flex-direction:column}
+  form label{font-weight:600;font-size:.9rem;margin-bottom:6px}
+  input[type=text],input[type=number],input[type=date],input[type=file],select,textarea{
+    padding:11px 14px;border:1.5px solid var(--bd);border-radius:var(--rs);
+    font-size:1rem;font-family:inherit;background:var(--sf);color:var(--tx);
+    transition:.2s;width:100%;max-width:500px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+  input[type=file]{padding:9px 12px;cursor:pointer}
+
+  form ul{list-style:none;display:flex;gap:12px;flex-wrap:wrap}
+  form ul li{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--rs);cursor:pointer;transition:.2s}
+  form ul li:hover{border-color:var(--p)}
+  form ul li label{margin:0;cursor:pointer;font-weight:500}
+  form ul li input[type=radio]{width:auto;accent-color:var(--p);cursor:pointer}
+
+  .errorlist{list-style:none;color:var(--err);font-size:.85rem;margin-top:6px;padding:6px 10px;background:var(--err-bg);border-radius:6px;display:block!important}
+
+  button,.btn{display:inline-block;padding:11px 24px;background:linear-gradient(135deg,var(--p),var(--pd));color:#fff;border:0;border-radius:var(--rs);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer;transition:.2s;box-shadow:0 4px 12px rgba(99,102,241,.3);text-decoration:none;margin-top:4px}
+  button:hover,.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(99,102,241,.4)}
+  button:active,.btn:active{transform:none}
+
+  .messages{list-style:none;margin-bottom:24px}
+  .messages li{padding:14px 20px;margin-bottom:10px;border-radius:var(--rs);font-weight:500;border-left:4px solid;display:flex;align-items:center;gap:12px;animation:slideIn .3s}
+  .messages li::before{font-size:1.2rem}
+  .messages .success{background:var(--ok-bg);color:#065f46;border-color:var(--ok)}
+  .messages .success::before{content:'✓';color:var(--ok);font-weight:700}
+  .messages .error{background:var(--err-bg);color:#991b1b;border-color:var(--err)}
+  .messages .error::before{content:'!';color:var(--err);font-weight:700}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;margin-top:12px;background:var(--sf);border-radius:var(--rs);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  thead th{background:linear-gradient(135deg,#f1f5f9,#e2e8f0);font-weight:600;font-size:.85rem;text-transform:uppercase;letter-spacing:.03em;padding:14px 16px;text-align:left;border-bottom:2px solid var(--bd)}
+  tbody td{padding:14px 16px;border-bottom:1px solid var(--bd);font-size:.95rem}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr{transition:.15s}
+  tbody tr:hover{background:#f8fafc}
+  table a{color:var(--p);text-decoration:none;font-weight:600;padding:6px 12px;border-radius:6px;transition:.15s;display:inline-block}
+  table a:hover{background:var(--pl);color:var(--pd)}
+
+  .grade-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-weight:700;color:#fff}
+  .grade-5{background:linear-gradient(135deg,#10b981,#059669)}
+  .grade-4{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+  .grade-3{background:linear-gradient(135deg,#f59e0b,#d97706)}
+  .grade-2{background:linear-gradient(135deg,#ef4444,#dc2626)}
+
+  .empty-state{text-align:center;padding:60px 24px;background:var(--sf);border:2px dashed var(--bd);border-radius:var(--r);color:var(--mu)}
+  .empty-state .icon{font-size:3rem;margin-bottom:12px;opacity:.6}
+  .empty-state p{max-width:400px;margin:0 auto}
+
+  .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--p);text-decoration:none;font-weight:500;padding:8px 16px;border-radius:var(--rs);transition:.2s;margin-top:24px}
+  .back-link:hover{background:var(--pl);transform:translateX(-3px)}
+
+  .footer{text-align:center;padding:32px 0;color:var(--mu);font-size:.85rem;margin-top:40px;border-top:1px solid var(--bd)}
+
+  @media(max-width:640px){
+    h1{font-size:1.6rem}
+    .card{padding:20px}
+    .nav-inner{flex-wrap:wrap}
+    .nav-link{padding:6px 12px;font-size:.85rem}
+    table{font-size:.85rem}
+    thead th,tbody td{padding:10px 8px}
+  }
 </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-  <div class="container">
-    <a class="navbar-brand" href="{% url 'index' %}">
-      <i class="bi bi-bar-chart-fill"></i> Успеваемость
-    </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-            data-bs-target="#navmenu">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navmenu">
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link" href="{% url 'index' %}">Главная</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'db_list' %}">База данных</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'upload' %}">Загрузить файл</a></li>
-        <li class="nav-item"><a class="nav-link" href="/admin/" target="_blank">Админка</a></li>
-      </ul>
-    </div>
+<nav>
+  <div class="nav-inner">
+    <span class="logo">📊 Успеваемость</span>
+    <a href="{% url 'index' %}" class="nav-link">Главная</a>
+    <a href="{% url 'upload' %}" class="nav-link">Загрузить файл</a>
   </div>
 </nav>
 
-<div class="container pb-5">
+<div class="container">
 
   {% if messages %}
-    {% for m in messages %}
-      <div class="alert alert-{{ m.tags|default:'info' }} alert-dismissible fade show">
-        {{ m }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    {% endfor %}
+    <ul class="messages">
+      {% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}
+    </ul>
   {% endif %}
 
   {% block content %}{% endblock %}
 
+  <div class="footer">
+    Django · Импорт и экспорт данных в JSON / XML
+  </div>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-{% block scripts %}{% endblock %}
 </body>
 </html>

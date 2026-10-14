@@ -2,69 +2,48 @@
 {% block title %}Главная — Успеваемость{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">Ввод данных</h1>
+<h1>Ввод данных об успеваемости</h1>
+<p class="subtitle">Заполните форму — данные сохранятся в файл JSON или XML</p>
 
-<div class="card p-4 mb-4">
+<div class="card">
   <form method="post" novalidate>
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">
-      <i class="bi bi-save"></i> Сохранить
-    </button>
+    <button type="submit">💾 Сохранить в файл</button>
   </form>
 </div>
 
-<div class="row mb-4">
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h5>Записей в БД</h5>
-      <p class="display-6 mb-0">{{ db_count }}</p>
-      <a href="{% url 'db_list' %}" class="btn btn-outline-primary mt-2">
-        Открыть БД
-      </a>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h5>Файлов на сервере</h5>
-      <p class="display-6 mb-0">{{ files|length }}</p>
-      <span class="text-muted">media/data и media/uploads</span>
-    </div>
-  </div>
-</div>
+<h2>Файлы данных</h2>
 
-<h2 class="mb-3">Файлы данных</h2>
 {% if files %}
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
+  <table>
+    <thead>
+      <tr>
+        <th>Имя файла</th>
+        <th>Раздел</th>
+        <th>Размер</th>
+        <th>Изменён</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in files %}
         <tr>
-          <th>Имя</th><th>Раздел</th><th>Размер</th><th>Изменён</th><th></th>
+          <td><strong>{{ f.name }}</strong></td>
+          <td>
+            {% if f.folder == 'data' %}📝 Созданные{% else %}📤 Загруженные{% endif %}
+          </td>
+          <td>{{ f.size }} Б</td>
+          <td>{{ f.mtime|date:"d.m.Y H:i:s" }}</td>
+          <td><a href="{% url 'file_detail' f.folder f.name %}">Открыть →</a></td>
         </tr>
-      </thead>
-      <tbody>
-        {% for f in files %}
-          <tr>
-            <td><strong>{{ f.name }}</strong></td>
-            <td>
-              {% if f.folder == 'data' %}
-                <span class="badge bg-secondary">Созданные</span>
-              {% else %}
-                <span class="badge bg-info text-dark">Загруженные</span>
-              {% endif %}
-            </td>
-            <td>{{ f.size }} Б</td>
-            <td>{{ f.mtime|date:"d.m.Y H:i:s" }}</td>
-            <td>
-              <a class="btn btn-sm btn-outline-primary"
-                 href="{% url 'file_detail' f.folder f.name %}">Открыть</a>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      {% endfor %}
+    </tbody>
+  </table>
 {% else %}
-  <div class="alert alert-secondary">Пока ни одного файла не найдено.</div>
+  <div class="empty-state">
+    <div class="icon">📭</div>
+    <p>Пока ни одного файла с данными не найдено. Добавьте первую запись через форму выше.</p>
+  </div>
 {% endif %}
 {% endblock %}

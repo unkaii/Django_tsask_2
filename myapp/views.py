@@ -6,13 +6,9 @@ from datetime import datetime
 
 from django.conf import settings
 from django.contrib import messages
-from django.db import IntegrityError
-from django.db.models import Q
-from django.http import JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 
-from .forms import GradeForm, GradeModelForm, UploadForm
-from .models import Grade
+from .forms import GradeForm, UploadForm
 
 DATA_DIR = os.path.join(settings.MEDIA_ROOT, 'data')
 UPLOAD_DIR = os.path.join(settings.MEDIA_ROOT, 'uploads')
@@ -29,15 +25,15 @@ def _validate_record(item, idx):
     for key in REQUIRED_FIELDS:
         if key not in item:
             raise ValueError(f'Запись #{idx}: отсутствует поле "{key}".')
-        if not str(item[key]).strip():
-            raise ValueError(f'Запись #{idx}: поле "{key}" не может быть пустым.')
 
     try:
         g = int(item['grade'])
     except (TypeError, ValueError):
         raise ValueError(f'Запись #{idx}: оценка должна быть числом.')
+
     if not 2 <= g <= 5:
         raise ValueError(f'Запись #{idx}: оценка должна быть от 2 до 5.')
+
     item['grade'] = g
 
     date_str = str(item['date']).strip()
@@ -48,8 +44,12 @@ def _validate_record(item, idx):
             break
         except ValueError:
             continue
+
     if parsed is None:
-        raise ValueError(f'Запись #{idx}: дата должна быть в формате ДД.ММ.ГГГГ.')
+        raise ValueError(
+            f'Запись #{idx}: дата должна быть в формате ДД.ММ.ГГГГ.'
+        )
+
     item['date'] = parsed.strftime('%d.%m.%Y')
     return item
 
@@ -139,60 +139,24 @@ def index(request):
         form = GradeForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            storage = data['storage']
             record = {
                 'student': data['student_name'],
                 'subject': data['subject'],
                 'grade': data['grade'],
                 'date': data['date'].strftime('%d.%m.%Y'),
             }
-
-            if storage == 'db':
-                exists = Grade.objects.filter(
-                    student=record['student'],
-                    subject=record['subject'],
-                    grade=record['grade'],
-                    date=data['date'],
-                ).exists()
-                if exists:
-                    messages.warning(
-                        request,
-                        'Такая запись уже есть в базе данных — дубликат не добавлен.'
-                    )
-                else:
-                    try:
-                        Grade.objects.create(
-                            student=record['student'],
-                            subject=record['subject'],
-                            grade=record['grade'],
-                            date=data['date'],
-                        )
-                        messages.success(request, 'Запись сохранена в базу данных.')
-                    except IntegrityError:
-                        messages.warning(
-                            request,
-                            'Дубликат: такая запись уже есть в БД.'
-                        )
-            else:
-                fmt = 'json' if storage == 'file_json' else 'xml'
-                try:
-                    _append_record(record, fmt)
-                    messages.success(
-                        request,
-                        f'Запись сохранена в grades.{fmt}'
-                    )
-                except Exception as e:
-                    messages.error(request, f'Не удалось сохранить: {e}')
-
-            return redirect('index')
+            try:
+                _append_record(record, data['file_format'])
+                messages.success(
+                    request,
+                    f'Запись сохранена в grades.{data["file_format"]}'
+                )
+                return redirect('index')
+            except Exception as e:
+                messages.error(request, f'Не удалось сохранить: {e}')
 
     files = _list_files()
-    db_count = Grade.objects.count()
-    return render(request, 'myapp/index.html', {
-        'form': form,
-        'files': files,
-        'db_count': db_count,
-    })
+    return render(request, 'myapp/index.html', {'form': form, 'files': files})
 
 
 def upload_view(request):
@@ -204,6 +168,7 @@ def upload_view(request):
         if form.is_valid():
             uploaded = form.cleaned_data['file']
             ext = os.path.splitext(uploaded.name)[1].lower()
+
             safe_name = f'{uuid.uuid4().hex}{ext}'
             dest = os.path.join(UPLOAD_DIR, safe_name)
 
@@ -255,62 +220,3 @@ def file_detail(request, folder, filename):
         'folder': folder,
         'records': records,
     })
-
-
-def db_list(request):
-    records = Grade.objects.all()
-    return render(request, 'myapp/db_list.html', {
-        'records': records,
-        'total': records.count(),
-    })
-
-
-def db_search(request):
-    query = request.GET.get('q', '').strip()
-    qs = Grade.objects.all()
-
-    if query:
-        qs = qs.filter(
-            Q(student__icontains=query) | Q(subject__icontains=query)
-        )
-
-    data = [
-        {
-            'id': g.id,
-            'student': g.student,
-            'subject': g.subject,
-            'grade': g.grade,
-            'date': g.date.strftime('%d.%m.%Y'),
-        }
-        for g in qs[:200]
-    ]
-    return JsonResponse({'count': len(data), 'results': data})
-
-
-def db_edit(request, pk):
-    grade = get_object_or_404(Grade, pk=pk)
-
-    if request.method == 'POST':
-        form = GradeModelForm(request.POST, instance=grade)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Запись обновлена.')
-            return redirect('db_list')
-    else:
-        form = GradeModelForm(
-            instance=grade,
-            initial={'date': grade.date.strftime('%d.%m.%Y')},
-        )
-
-    return render(request, 'myapp/db_edit.html', {'form': form, 'grade': grade})
-
-
-def db_delete(request, pk):
-    grade = get_object_or_404(Grade, pk=pk)
-
-    if request.method == 'POST':
-        grade.delete()
-        messages.success(request, 'Запись удалена.')
-        return redirect('db_list')
-
-    return render(request, 'myapp/db_delete.html', {'grade': grade})

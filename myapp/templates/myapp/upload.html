@@ -1,18 +1,12 @@
 {% extends 'myapp/base.html' %}
-{% block title %}Загрузка файла{% endblock %}
-
 {% block content %}
-<h1 class="mb-4">Загрузка файла</h1>
-<p class="text-muted">Поддерживаются форматы JSON и XML размером до 5 МБ.</p>
+<h1>Загрузка файла JSON/XML</h1>
 
-<div class="card p-4">
-  <form method="post" enctype="multipart/form-data" novalidate>
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary" type="submit">
-      <i class="bi bi-upload"></i> Загрузить
-    </button>
-    <a class="btn btn-secondary" href="{% url 'index' %}">На главную</a>
-  </form>
-</div>
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Загрузить</button>
+</form>
+
+<p><a href="{% url 'index' %}">← На главную</a></p>
 {% endblock %}

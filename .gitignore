@@ -220,6 +220,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-db.sqlite3
-db.sqlite3-journal
-staticfiles/
